@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "code-reviewer": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "cwd": ".",
+      "env": {}
+    }
+  }
+} 
