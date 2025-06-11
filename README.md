@@ -126,7 +126,10 @@ The system includes several predefined review templates:
 
 **Code:**
 ```typescript
-const API_KEY = "***";
+   13  // Configuration settings
+   14+ const BASE_URL = 'https://api.example.com';
+>  15+ const API_KEY = "***";
+   16+ const TIMEOUT = 5000;
 ```
 
 ### 2. MAJOR: Potential null/undefined access
@@ -138,7 +141,11 @@ const API_KEY = "***";
 
 **Code:**
 ```javascript
-user.profile.name = 'John';
+   25  function updateUser(user) {
+   26+   if (user) {
+>  27+     user.profile.name = 'John';
+   28+     user.profile.email = email;
+   29+   }
 ```
 
 ### 3. MINOR: Missing JSDoc documentation
@@ -146,6 +153,14 @@ user.profile.name = 'John';
 **File:** `src/helpers.ts`
 **Line:** 15
 **Description:** Function 'calculateTotal' lacks JSDoc documentation
+**Code:**
+```javascript
+   14  
+>  15+ function calculateTotal(items, tax) {
+   16+   let total = 0;
+   17+   for (let item of items) {
+```
+
 **Suggestion:** Add JSDoc:
 ```javascript
 /**

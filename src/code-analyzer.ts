@@ -44,28 +44,30 @@ export class CodeAnalyzer {
     for (const line of addedLines) {
       // Check for long lines
       if (line.content.length > 120) {
-        issues.push({
-          severity: 'minor',
-          title: 'Long line detected',
-          description: `Line is ${line.content.length} characters long`,
-          file: fileChange.fileName,
-          line: line.lineNumber,
-          suggestion: 'Break into multiple lines for better readability',
-          codeSnippet: line.content.substring(0, 80) + '...',
-        });
+        issues.push(this.createIssue(
+          'minor',
+          'Long line detected',
+          `Line is ${line.content.length} characters long`,
+          fileChange.fileName,
+          line.lineNumber,
+          'Break into multiple lines for better readability',
+          fileChange,
+          3
+        ));
       }
       
       // Check for TODO comments
       if (line.content.match(/\b(TODO|FIXME)\b/i)) {
-        issues.push({
-          severity: 'info',
-          title: 'TODO/FIXME comment found',
-          description: 'Unresolved TODO or FIXME comment',
-          file: fileChange.fileName,
-          line: line.lineNumber,
-          suggestion: 'Address the TODO or create a proper issue',
-          codeSnippet: line.content.trim(),
-        });
+        issues.push(this.createIssue(
+          'info',
+          'TODO/FIXME comment found',
+          'Unresolved TODO or FIXME comment',
+          fileChange.fileName,
+          line.lineNumber,
+          'Address the TODO or create a proper issue',
+          fileChange,
+          2
+        ));
       }
     }
     
@@ -86,7 +88,7 @@ export class CodeAnalyzer {
           file: fileChange.fileName,
           line: line.lineNumber,
           suggestion: 'Move to environment variables',
-          codeSnippet: line.content.replace(/(['""])[^'""]*(['""])/g, '$1***$2'),
+          codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 2).replace(/(['""])[^'""]*(['""])/g, '$1***$2'),
         });
       }
     }
@@ -110,7 +112,7 @@ export class CodeAnalyzer {
             file: fileChange.fileName,
             line: line.lineNumber,
             suggestion: 'Use === or !== for strict comparison',
-            codeSnippet: line.content.trim(),
+            codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 2),
           });
         }
       }
@@ -129,15 +131,15 @@ export class CodeAnalyzer {
       if (line.content.match(/\w+\.\w+/) && !line.content.match(/\?\./)) {
         const hasNullCheck = this.hasNullCheckNearby(fileChange, line.lineNumber);
         if (!hasNullCheck && !line.content.match(/if\s*\(|&&|catch|try/)) {
-          issues.push({
-            severity: 'major',
-            title: 'Potential null/undefined access',
-            description: 'Object property access without null checking',
-            file: fileChange.fileName,
-            line: line.lineNumber,
-            suggestion: 'Add null check or use optional chaining (?.)',
-            codeSnippet: line.content.trim(),
-          });
+                  issues.push({
+          severity: 'major',
+          title: 'Potential null/undefined access',
+          description: 'Object property access without null checking',
+          file: fileChange.fileName,
+          line: line.lineNumber,
+          suggestion: 'Add null check or use optional chaining (?.)',
+          codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 3),
+        });
         }
       }
       
@@ -150,7 +152,7 @@ export class CodeAnalyzer {
           file: fileChange.fileName,
           line: line.lineNumber,
           suggestion: 'Check array length before accessing elements',
-          codeSnippet: line.content.trim(),
+          codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 2),
         });
       }
       
@@ -163,7 +165,7 @@ export class CodeAnalyzer {
           file: fileChange.fileName,
           line: line.lineNumber,
           suggestion: 'Add proper exit condition or break statement',
-          codeSnippet: line.content.trim(),
+          codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 4),
         });
       }
       
@@ -176,7 +178,7 @@ export class CodeAnalyzer {
           file: fileChange.fileName,
           line: line.lineNumber,
           suggestion: 'Use comparison operator or wrap assignment in extra parentheses if intentional',
-          codeSnippet: line.content.trim(),
+          codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 3),
         });
       }
       
@@ -189,7 +191,7 @@ export class CodeAnalyzer {
           file: fileChange.fileName,
           line: line.lineNumber,
           suggestion: 'Remove unreachable code or restructure logic',
-          codeSnippet: line.content.trim(),
+          codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 4),
         });
       }
       
@@ -202,7 +204,7 @@ export class CodeAnalyzer {
           file: fileChange.fileName,
           line: line.lineNumber,
           suggestion: 'Use template literals or explicit type conversion',
-          codeSnippet: line.content.trim(),
+          codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 2),
         });
       }
     }
@@ -236,7 +238,7 @@ export class CodeAnalyzer {
             file: fileChange.fileName,
             line: line.lineNumber,
             suggestion: this.generateJSDocSuggestion(functionInfo),
-            codeSnippet: line.content.trim(),
+            codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 3),
           });
         }
       }
@@ -253,7 +255,7 @@ export class CodeAnalyzer {
             file: fileChange.fileName,
             line: line.lineNumber,
             suggestion: `Add JSDoc:\n/**\n * Description of ${className} class\n */`,
-            codeSnippet: line.content.trim(),
+            codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 3),
           });
         }
       }
@@ -300,7 +302,7 @@ export class CodeAnalyzer {
           file: fileChange.fileName,
           line: line.lineNumber,
           suggestion: 'Cache array length in a variable before the loop',
-          codeSnippet: line.content.trim(),
+          codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 3),
         });
       }
       
@@ -313,7 +315,7 @@ export class CodeAnalyzer {
           file: fileChange.fileName,
           line: line.lineNumber,
           suggestion: 'Consider optimizing with better data structures or algorithms',
-          codeSnippet: line.content.trim(),
+          codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 4),
         });
       }
       
@@ -326,7 +328,7 @@ export class CodeAnalyzer {
           file: fileChange.fileName,
           line: line.lineNumber,
           suggestion: 'Use asynchronous alternatives with async/await',
-          codeSnippet: line.content.trim(),
+          codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 3),
         });
       }
       
@@ -339,7 +341,7 @@ export class CodeAnalyzer {
           file: fileChange.fileName,
           line: line.lineNumber,
           suggestion: 'Use array.join() or template literals for better performance',
-          codeSnippet: line.content.trim(),
+          codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 3),
         });
       }
       
@@ -352,7 +354,7 @@ export class CodeAnalyzer {
           file: fileChange.fileName,
           line: line.lineNumber,
           suggestion: 'Consider caching results for repeated calls with same parameters',
-          codeSnippet: line.content.trim(),
+          codeSnippet: this.getCodeContext(fileChange, line.lineNumber, 4),
         });
       }
     }
@@ -361,6 +363,76 @@ export class CodeAnalyzer {
   }
 
   // Helper methods for enhanced analysis
+  private createIssue(
+    severity: 'critical' | 'major' | 'minor' | 'info',
+    title: string,
+    description: string,
+    file: string,
+    line: number,
+    suggestion: string,
+    fileChange: FileChange,
+    contextLines: number = 2
+  ): ReviewIssue {
+    return {
+      severity,
+      title,
+      description,
+      file,
+      line,
+      suggestion,
+      codeSnippet: this.getCodeContext(fileChange, line, contextLines),
+      language: this.getLanguageFromExtension(this.getFileExtension(file)),
+    };
+  }
+
+  private getCodeContext(fileChange: FileChange, targetLineNumber: number, contextLines: number = 2): string {
+    // Get all lines sorted by line number
+    const allLines = [...fileChange.changes].sort((a, b) => a.lineNumber - b.lineNumber);
+    
+    // Find the target line
+    const targetLine = allLines.find(line => line.lineNumber === targetLineNumber);
+    if (!targetLine) {
+      return `// Line ${targetLineNumber} not found in changes`;
+    }
+    
+    // Find lines that are close to our target line
+    const contextLinesData: LineChange[] = [];
+    
+    // Get lines before the target
+    const beforeLines = allLines
+      .filter(line => line.lineNumber < targetLineNumber && line.lineNumber >= targetLineNumber - contextLines)
+      .slice(-contextLines); // Take only the last N lines
+    
+    // Get lines after the target
+    const afterLines = allLines
+      .filter(line => line.lineNumber > targetLineNumber && line.lineNumber <= targetLineNumber + contextLines)
+      .slice(0, contextLines); // Take only the first N lines
+    
+    // Combine: before + target + after
+    contextLinesData.push(...beforeLines, targetLine, ...afterLines);
+    
+    // Format the lines for display
+    const formattedLines = contextLinesData.map(line => {
+      const isTarget = line.lineNumber === targetLineNumber;
+      const prefix = isTarget ? '> ' : '  ';
+      const lineNumberStr = String(line.lineNumber).padStart(3, ' ');
+      const typeIndicator = line.type === 'addition' ? '+' : line.type === 'deletion' ? '-' : ' ';
+      const content = line.content || '';
+      
+      return `${prefix}${lineNumberStr}${typeIndicator} ${content}`;
+    });
+    
+    // If we only have the target line, add some context indication
+    if (formattedLines.length === 1) {
+      const line = targetLine;
+      const lineNumberStr = String(line.lineNumber).padStart(3, ' ');
+      const typeIndicator = line.type === 'addition' ? '+' : line.type === 'deletion' ? '-' : ' ';
+      return `> ${lineNumberStr}${typeIndicator} ${line.content}`;
+    }
+    
+    return formattedLines.join('\n');
+  }
+
   private hasNullCheckNearby(fileChange: FileChange, lineNumber: number): boolean {
     const contextLines = fileChange.changes.filter(c => 
       Math.abs(c.lineNumber - lineNumber) <= 3 && 
@@ -480,5 +552,34 @@ export class CodeAnalyzer {
   private getFileExtension(fileName: string): string {
     const ext = fileName.toLowerCase().match(/\.[^.]*$/);
     return ext ? ext[0] : '';
+  }
+
+  private getLanguageFromExtension(ext: string): string {
+    const languageMap: { [key: string]: string } = {
+      '.js': 'javascript',
+      '.ts': 'typescript',
+      '.py': 'python',
+      '.java': 'java',
+      '.c': 'c',
+      '.cpp': 'cpp',
+      '.cs': 'csharp',
+      '.php': 'php',
+      '.rb': 'ruby',
+      '.go': 'go',
+      '.rs': 'rust',
+      '.swift': 'swift',
+      '.kt': 'kotlin',
+      '.scala': 'scala',
+      '.html': 'html',
+      '.css': 'css',
+      '.scss': 'scss',
+      '.less': 'less',
+      '.json': 'json',
+      '.xml': 'xml',
+      '.yaml': 'yaml',
+      '.yml': 'yaml',
+    };
+    
+    return languageMap[ext] || 'text';
   }
 } 
